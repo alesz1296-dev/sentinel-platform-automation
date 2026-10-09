@@ -4,13 +4,13 @@ SNTL Automation Platform is a Python/FastAPI platform automation and validation 
 
 The hardware-facing tools are deliberate black boxes. SNTL models their contracts and lifecycle evidence while concentrating implementation effort on cloud architecture, Kubernetes operations, observability, security, reliability, and software delivery.
 
-## Portfolio goals
+## Technology and engineering focus
 
-- Build a real Python/FastAPI control plane and CLI.
-- Practice Kubernetes, Terraform, AWS, CI/CD, and DevSecOps practices.
+- Python/FastAPI control plane and CLI.
+- Kubernetes, Terraform, AWS, CI/CD, and DevSecOps practices.
 - Use Prometheus, Grafana, and OpenTelemetry for correlated logs, metrics, and traces.
 - Implement durable job execution, recovery policies, RBAC, audit trails, and artifact retention.
-- Start locally; deploy AWS only through reviewed, manual-first steps.
+- Start locally and progress toward AWS deployment through reviewed, manual-first steps.
 
 ## Platform lifecycle
 
