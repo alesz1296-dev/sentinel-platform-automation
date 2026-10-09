@@ -1,6 +1,6 @@
-# Sentinel working standard
+# SNTL Automation Platform working standard
 
-This standard applies to every Sentinel contributor and session. It adapts the supplied Spec Kit, collaboration, CI, security, and manual-first infrastructure requirements to this project.
+This standard applies to every SNTL Automation Platform contributor and session. It adapts the supplied Spec Kit, collaboration, CI, security, and manual-first infrastructure requirements to this project.
 
 ## Spec-driven development
 
@@ -96,8 +96,8 @@ Kubernetes and AWS work is manual-first. Humans review and run all mutating infr
 - AWS planning supports low-cost development, EKS, ECS/Fargate, and a production-like reference. Expensive resources are disabled by default or protected by explicit variables and cost warnings.
 - Secrets use AWS Secrets Manager; non-secret configuration may use SSM Parameter Store or Terraform variables.
 
-## Sentinel-specific design boundaries
+## SNTL-specific design boundaries
 
-The enterprise hardware adapters are black boxes. Sentinel owns job sequencing, platform leases, observed state, recovery, observability, RBAC, audit trails, and deployment. It does not reproduce proprietary BIOS, EFI, register, or IPS implementations.
+The enterprise hardware adapters are black boxes. SNTL owns job sequencing, platform leases, observed state, recovery, observability, RBAC, audit trails, and deployment. It does not reproduce proprietary BIOS, EFI, register, or IPS implementations.
 
 Tests may destabilize a target. Recovery is stage-aware, bounded, and automated: probe, soft reboot, hard power cycle, reset known configuration, cooldown, retry, fail, or quarantine with alerts. One-day retention applies to the initial test environment's logs, traces, metrics, and artifacts.

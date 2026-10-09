@@ -1,8 +1,8 @@
-# Sentinel
+# SNTL Automation Platform
 
-Sentinel is a Python/FastAPI platform automation and validation system. It orchestrates versioned test workflows across simulated bare-metal platforms, records platform state and test results, and recovers from expected and unexpected reboots, freezes, and state mismatches.
+SNTL Automation Platform is a Python/FastAPI platform automation and validation system. It orchestrates versioned test workflows across simulated bare-metal platforms, records platform state and test results, and recovers from expected and unexpected reboots, freezes, and state mismatches.
 
-The hardware-facing tools are deliberate black boxes. Sentinel models their contracts and lifecycle evidence while concentrating implementation effort on cloud architecture, Kubernetes operations, observability, security, reliability, and software delivery.
+The hardware-facing tools are deliberate black boxes. SNTL models their contracts and lifecycle evidence while concentrating implementation effort on cloud architecture, Kubernetes operations, observability, security, reliability, and software delivery.
 
 ## Portfolio goals
 
