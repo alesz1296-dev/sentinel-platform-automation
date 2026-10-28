@@ -88,20 +88,151 @@ Cancellation stops new dispatch and requests cooperative cancellation of running
 ## Architecture
 
 ```mermaid
-flowchart LR
-    User[CLI or API client] --> API[FastAPI]
-    API --> DB[(PostgreSQL)]
-    Scheduler[Python scheduler] --> DB
-    Worker[Python workers] --> DB
-    Worker --> Adapter[Platform adapter]
-    Adapter --> Sim[Deterministic hardware simulator]
-    Worker --> Artifacts[Local artifacts or S3]
-    API --> Telemetry[Metrics / logs / traces]
-    Scheduler --> Telemetry
-    Worker --> Telemetry
+flowchart TB
+    Operator[Operator CLI or API client]
+    Load[k6 traffic and incident tests]
+    GitHub[GitHub Actions]
+    GitOps[Git-tracked desired state]
+    Terraform[Terraform validation and manual plan]
+
+    subgraph Local[Local simulation environment]
+        subgraph Control[Kind control cluster]
+            API[FastAPI API]
+            Orchestrator[Scheduler and recovery controller]
+            Workers[Execution workers]
+            DB[(PostgreSQL)]
+            Artifacts[Local artifact store]
+            Argo[Argo CD and Argo Rollouts]
+            OTel[OpenTelemetry Collector]
+            Prometheus[Prometheus]
+            Grafana[Grafana]
+            Alertmanager[Alertmanager]
+            Loki[Loki]
+            Tempo[Tempo]
+        end
+
+        subgraph Target[Kind simulated target cluster]
+            Simulator[Platform simulator]
+            TargetState[Heartbeat, boot session, and lifecycle evidence]
+        end
+    end
+
+    subgraph AWS[Optional AWS validation target]
+        ECR[Amazon ECR]
+        EKS[Amazon EKS]
+        RDS[(Amazon RDS PostgreSQL)]
+        S3[Amazon S3 artifacts]
+    end
+
+    Operator --> API
+    Load --> API
+    API --> DB
+    Orchestrator --> DB
+    Workers --> DB
+    API --> Orchestrator
+    Orchestrator --> Workers
+    Workers --> Artifacts
+    Workers --> Simulator
+    Simulator --> TargetState
+    TargetState --> Workers
+
+    API --> OTel
+    Orchestrator --> OTel
+    Workers --> OTel
+    OTel --> Loki
+    OTel --> Tempo
+    Prometheus --> Grafana
+    Prometheus --> Alertmanager
+    API --> Prometheus
+    Orchestrator --> Prometheus
+    Workers --> Prometheus
+    Argo --> API
+    Argo --> Orchestrator
+    Argo --> Workers
+
+    GitHub --> GitOps
+    GitOps --> Argo
+    Terraform -. optional reviewed plan .-> AWS
+    GitHub -. optional OIDC publish .-> ECR
+    ECR -. optional image source .-> EKS
+    EKS -. optional workload state .-> RDS
+    EKS -. optional artifact access .-> S3
+
+    classDef optional fill:#f4f4f4,stroke:#777,stroke-dasharray: 5 5
+    class ECR,EKS,RDS,S3 optional
 ```
 
+The control and target clusters become separate once failure-isolation exercises begin. The simulator may fail without taking down API, scheduling, recovery, or investigation services. The AWS region is a target design for later scoped validation; it is not part of daily local operation. See [Simulation environment guide](SIMULATION-ENVIRONMENT.md) and [CI/CD pipeline design](CI-CD-PIPELINE.md) for the operational and delivery details.
+
 Start with one application repository and shared domain library, deployed as API, scheduler, and worker roles. Avoid separate services for each boot stage. Use PostgreSQL as both authoritative storage and the initial durable task queue, locally and in AWS. This keeps the first implementation small enough to explain and operate.
+
+### Consistent logical and deployment views
+
+The local and AWS diagrams describe the same system. They differ only in where
+components run and which data services they use. SNTL has logical service
+boundaries and deployment boundaries:
+
+| Logical responsibility | Initial deployable unit | Optional later split | Local implementation | AWS target |
+| --- | --- | --- | --- | --- |
+| API, identity, job submission, workflow validation | API | API and identity service | Kind control cluster | EKS workload |
+| Platform inventory | API module | Inventory service | API module with PostgreSQL | API module or EKS service with RDS |
+| Job and workflow management | API module | Job/workflow service | API module with PostgreSQL | API module or EKS service with RDS |
+| Scheduling and orchestration | Orchestrator | Scheduler service | Kind control cluster | EKS workload |
+| Recovery decisions | Orchestrator module | Recovery controller | Orchestrator | Orchestrator or EKS service |
+| Test and transition execution | Workers | Worker pool by capability | Kind control cluster | EKS worker deployment |
+| Platform adapter and simulated target | Worker adapter plus simulator | Dedicated adapter service | Separate target Kind cluster | Worker-side adapter and selected target environment |
+| Durable run state | PostgreSQL | PostgreSQL plus an optional dispatch extension | Local PostgreSQL | Private RDS PostgreSQL |
+| Artifacts | Artifact adapter | Dedicated artifact service if needed | Local filesystem or MinIO | Private S3 |
+| Telemetry and alerting | Observability stack | Managed AWS integrations if justified | OTel, Prometheus, Grafana, Loki, Tempo, Alertmanager | OTel and selected in-cluster or AWS backends |
+
+The screenshot-style AWS view is therefore valid when its boxes are read as
+logical responsibilities. It should not imply that every box must be a separate
+deployment in the first release. The initial AWS deployment can run API,
+orchestrator, and workers as three workloads while inventory, job management,
+and recovery remain explicit modules with clear ownership boundaries.
+
+### AWS target view
+
+This view uses the same responsibilities as the local diagram and replaces the
+local services with their AWS target equivalents. EKS is the Kubernetes
+workload platform; the managed EKS control plane is not where application
+services execute.
+
+```mermaid
+flowchart TB
+    Users[CLI, API clients, operators] --> API[FastAPI API]
+    IAM[AWS IAM and workload identity] -. authorizes .-> API
+
+    subgraph EKS[Optional AWS validation: EKS workload cluster]
+        API --> Inventory[Platform inventory module]
+        API --> Jobs[Job and workflow module]
+        Jobs --> Orchestrator[Scheduler and orchestrator]
+        Orchestrator --> Recovery[Recovery controller module]
+        Orchestrator --> Workers[Test and transition workers]
+        Workers --> Adapters[Simulated platform adapters]
+        API --> OTel[OpenTelemetry Collector]
+        Orchestrator --> OTel
+        Workers --> OTel
+    end
+
+    DB[(RDS PostgreSQL)]
+    S3[S3 artifacts]
+    Observability[Prometheus, Grafana, Loki, Tempo]
+    Alerts[Alertmanager to email or webhook]
+
+    API --> DB
+    Inventory --> DB
+    Jobs --> DB
+    Orchestrator --> DB
+    Workers --> DB
+    Workers --> S3
+    OTel --> Observability
+    Observability --> Alerts
+```
+
+The local diagram is the daily operating view; this AWS view is the optional
+cloud-validation view. Both preserve the same workflow state, lease, adapter,
+recovery, telemetry, artifact, and audit contracts.
 
 Workers claim eligible tasks in short transactions using row locks, persist an attempt, then execute outside the transaction. Claims expire and are renewed by heartbeats. Do not hold a database transaction open during a test or reboot.
 
@@ -308,11 +439,11 @@ Initial alerts: queued work with no healthy workers, rising queue age, repeated 
 - Use GitHub Actions OIDC for AWS release/infrastructure operations; constrain the trust policy to the intended repository and environment.
 - Pin dependencies and action revisions; scan images, dependencies, Terraform, and Kubernetes manifests. Emit an SBOM and define how findings are reviewed.
 
-CI on pull requests: lint/type checks, domain tests, PostgreSQL integration tests, container build, manifest rendering, infrastructure validation, and scans. Add an ephemeral kind smoke deployment when the chart exists.
+Pull-request CI runs Actionlint, Gitleaks, lint/type checks, domain tests, PostgreSQL integration tests when available, container build, manifest rendering, Terraform formatting and credential-free static validation, TFLint, Checkov, and SonarQube after its trusted credentials and Quality Gate are configured. Add an ephemeral Kind smoke deployment when the chart exists. See [CI/CD pipeline design](CI-CD-PIPELINE.md) for the required checks and implementation order.
 
-Release: build once, push an immutable ECR image, record the digest, and update the Git-tracked Helm values. Argo CD running inside the demo cluster pulls the desired release. This avoids requiring hosted CI runners to reach a private cluster endpoint. Bootstrap Argo CD from an authorized operator context.
+Release builds one traceable immutable artifact and promotes the same digest through local `dev`, `staging`, and `production` simulation environments. Local development may use Kind-loaded images or a local registry. ECR publication, digest recording, Cosign signing, and SBOM attestation are optional protected-environment capabilities, not prerequisites for local CD. Argo CD running inside the demo cluster observes the Git-tracked desired state, avoiding a requirement for hosted runners to access a private cluster endpoint. Bootstrap Argo CD from an authorized operator context.
 
-Separate application release automation from Terraform provisioning. Run Terraform plans on pull requests; apply through a protected manually initiated environment workflow. Scope deployment roles separately from infrastructure roles. Use a one-shot migration job and backward-compatible schema changes; reverting an image does not automatically reverse a database migration.
+Separate application release automation from Terraform provisioning. Pull requests perform Terraform static checks without AWS access. An authenticated Terraform plan is a manually dispatched, OIDC-protected workflow after the AWS target and remote state exist; apply remains a separately approved future operation. Scope deployment roles separately from infrastructure roles. Use a one-shot migration job and backward-compatible schema changes; reverting an image does not automatically reverse a database migration.
 
 ## Implementation milestones and acceptance criteria
 
@@ -334,23 +465,23 @@ Create a Helm chart and kind workflow. Add probes, resources, workload security 
 
 Done when the same demo runs on kind; a worker pod restart is recoverable; a task can be followed across logs and traces; and an induced worker outage raises the intended alert.
 
-### 4. CI/CD and supply-chain evidence
+### 4. CI/CD, local CD, and supply-chain evidence
 
-Add validation pipelines, container publishing, SBOM/scans, release manifests, and GitOps deployment. Test schema migration and rollback behavior.
+Add pre-commit hooks; GitHub pull-request validation for Actionlint, Gitleaks, Python quality, Terraform formatting/validation, TFLint, Checkov, and later Helm/Kustomize rendering; SonarQube coverage and Quality Gate after trusted configuration exists; container build, Trivy, SBOM evidence, local release manifests, and GitOps delivery. Test schema migration and rollback behavior. Keep all cloud mutation disabled.
 
-Done when a commit builds a traceable immutable artifact, CI rejects a meaningful regression, and the previous compatible application version can be restored from Git.
+Done when local hooks and CI independently reject a meaningful regression, a commit produces a traceable immutable artifact and retained quality evidence, a digest is promoted through the local environments, and a degraded release can be halted or restored from Git.
 
-### 5. Temporary AWS deployment
+### 5. Terraform-managed AWS target and optional cloud validation
 
-Add Terraform, remote state bootstrap, EKS/ECR/RDS/S3/Secrets Manager/IAM, environment configuration, cost notes, and deployment/teardown scripts. Reuse the existing Helm chart.
+Add Terraform for remote state bootstrap, VPC, EKS, ECR, RDS, S3, Secrets Manager, IAM/OIDC, environment configuration, budget alerts, cost notes, and teardown scripts. Validate the design through formatting, `init -backend=false`, validation, TFLint, Checkov, and reviewed plans without deploying it. Reuse the existing Helm chart and keep costly resources disabled by default.
 
-Done when a documented procedure provisions the environment, runs the demo, retrieves artifacts, and removes demo resources. Verify teardown includes load balancers, volumes, log storage, database snapshots, and versioned S3 objects according to the documented retention choice. Report deliberately retained state, images, or backups.
+Done when the AWS target design produces reviewed static-validation evidence and a manual plan artifact without automatic apply. A later explicitly approved cloud exercise may provision only the capability under test, run the demo, retrieve artifacts, and remove the resources. Teardown verification includes load balancers, volumes, log storage, database snapshots, and versioned S3 objects according to the retention choice, with deliberately retained state, images, or backups reported.
 
 ### 6. Portfolio evidence and operational exercises
 
-Publish an architecture diagram, API examples, screenshots, short demo recording, ADRs, runbooks, measured load results, and one incident report.
+Publish an architecture diagram, API examples, screenshots, short demo recording, ADRs, runbooks, measured k6 results, dashboard and trace evidence, and incident reports for database, worker, network, reboot, and release failures.
 
-Done when another person can run the local demo from the README and understand both the simulated boundary and the demonstrated cloud engineering behavior.
+Done when another person can run the local demo from the README, reproduce a documented incident, follow the evidence to the diagnosis, and understand both the simulated boundary and the optional cloud engineering design.
 
 Milestones are ordered by dependency rather than calendar estimates. Estimate effort after the first durable vertical slice establishes implementation pace.
 

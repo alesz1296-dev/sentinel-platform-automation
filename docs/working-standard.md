@@ -69,11 +69,17 @@ Every task needs a primary owner, reviewer, phase, Spec Kit reference, required 
 
 ## Quality and CI
 
+The [CI/CD pipeline design](CI-CD-PIPELINE.md) is the authoritative implementation plan for local hooks, pull-request validation, SonarQube, container evidence, release promotion, and Terraform plan-only automation.
+
 CI begins in Phase 0 and runs:
 
 - `pytest`
 - `ruff check .`
 - `mypy app tests`
+- Actionlint for GitHub Actions workflows
+- Terraform formatting, validation, TFLint, and Checkov for infrastructure changes
+- Gitleaks for secret detection
+- SonarQube analysis and Quality Gate after trusted-project credentials are configured
 
 As relevant code is introduced, add Alembic migration validation, Docker build validation, `terraform validate`, and Helm template validation. Required checks must pass before a pull request can merge.
 

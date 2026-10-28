@@ -34,6 +34,10 @@ The project retains observability data for one day in its initial test environme
 
 - [Project context and requirements](docs/PROJECT-CONTEXT.md)
 - [Local-first implementation plan](docs/LOCAL-FIRST-IMPLEMENTATION.md)
+- [Simulation environment guide](docs/SIMULATION-ENVIRONMENT.md)
+- [Local architecture view](docs/ARCHITECTURE-LOCAL.md)
+- [AWS architecture view](docs/ARCHITECTURE-AWS.md)
+- [CI/CD pipeline design](docs/CI-CD-PIPELINE.md)
 - [Architecture and roadmap](docs/ARCHITECTURE-AND-ROADMAP.md)
 - [System behavior](docs/SYSTEM-BEHAVIOR.md)
 - [Working standard](docs/working-standard.md)

@@ -77,3 +77,7 @@ This document is a concise navigation aid. The authoritative behavioral and arch
 - [Architecture and roadmap](ARCHITECTURE-AND-ROADMAP.md)
 - [Working standard](working-standard.md)
 - [Local-first implementation plan](LOCAL-FIRST-IMPLEMENTATION.md)
+- [Simulation environment guide](SIMULATION-ENVIRONMENT.md)
+- [Local architecture view](ARCHITECTURE-LOCAL.md)
+- [AWS architecture view](ARCHITECTURE-AWS.md)
+- [CI/CD pipeline design](CI-CD-PIPELINE.md)
