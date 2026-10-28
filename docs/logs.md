@@ -1,5 +1,17 @@
 # Session log
 
+## 2026-10-28 — Local-first implementation context
+
+- **GitHub user:** alesz1296-dev
+- **Branch:** `docs/local-first-implementation-context`
+- **Objective:** Record SNTL's local Kind-first operating model, enduring requirements, and optional AWS implementation path.
+- **Work completed:** Added a concise project context and requirements brief plus a phased local-first plan covering the two-cluster topology, observability, traffic, fault injection, recovery evidence, and later Terraform/AWS mapping. Linked both documents from the README.
+- **Files or areas changed:** `README.md`, `docs/PROJECT-CONTEXT.md`, `docs/LOCAL-FIRST-IMPLEMENTATION.md`, `docs/logs.md`, `docs/changes.md`.
+- **Tests and checks run:** `git diff --check`; verified all README and intra-document links target existing files; reviewed the documentation diff.
+- **Decisions made:** Kind is the primary SNTL delivery and operations environment; AWS is a Terraform-defined, optional and manual-first validation target. The control and simulated target workloads use separate Kind clusters once failure-isolation testing begins.
+- **Blockers:** None.
+- **Next steps:** Review the documentation diff, then stage the explicit files and request approval before committing.
+
 ## 2026-10-09 — Architecture documentation migration
 
 - **GitHub user:** alesz1296-dev
