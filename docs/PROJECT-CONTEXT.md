@@ -1,5 +1,9 @@
 # SNTL project context
 
+## Project boundary update - 2026-10-31
+
+SNTL owns its domain workflows, simulator, durable state, recovery, operational incidents, telemetry and acceptance tests. Its build, CI, deployment and acceptance criteria require no sibling project. Generic experiment engines, randomized training and trainee scoring are outside scope. See [project boundaries](PROJECT-BOUNDARIES.md).
+
 ## Purpose
 
 SNTL is a platform automation and validation control plane. It accepts versioned hardware-validation workflows, selects a compatible simulated platform, drives its lifecycle through black-box adapters, records evidence, and applies bounded recovery when the target freezes, reboots unexpectedly, becomes unreachable, or enters an unexpected state.
@@ -30,6 +34,7 @@ AWS is a separately documented, Terraform-managed target architecture. The defau
 - Provide FastAPI and CLI interfaces for job submission, inspection, cancellation, platform operations, and evidence retrieval.
 - Run only approved immutable workflow versions; every run records the workflow version and content digest used.
 - Maintain separate desired state, observed state, execution stage, health, and boot-session identity for each platform.
+- Associate each platform with exactly one supported product family. Validate workflow product, hardware capabilities, and resource requirements before admission or dispatch.
 - Enforce one active mutating workflow per platform through renewable leases and fencing tokens.
 - Persist jobs, workflow runs, tasks, attempts, transitions, recovery decisions, incidents, audit events, and artifact metadata in PostgreSQL.
 - Preserve partial evidence when a task, worker, or target fails.
@@ -73,6 +78,7 @@ The Python domain model must remain portable. Cloud-specific behavior belongs in
 
 This document is a concise navigation aid. The authoritative behavioral and architecture specifications remain:
 
+- [Golden path and design review](GOLDEN-PATH.md) for the implementation sequence, phase gates, and unresolved decisions.
 - [System behavior](SYSTEM-BEHAVIOR.md)
 - [Architecture and roadmap](ARCHITECTURE-AND-ROADMAP.md)
 - [Working standard](working-standard.md)

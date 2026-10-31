@@ -1,5 +1,57 @@
 # Session log
 
+## 2026-10-31 - Feature 001 Phase 2 implementation
+
+- User: alesz1296-dev; branch not inspected; no Git commands.
+- Objective: begin the pure-Python domain and deterministic simulator after Phase 1 approval.
+- Work/areas: added project packaging, domain states/value objects, admission rules, retry validation, fenced deterministic simulator, and initial unit tests.
+- Decisions: Phase 2 has no persistence, API, containers, Kubernetes, or cloud operations.
+- Checks: `python -m pytest -q` passed (7 tests); `python -m ruff check . --no-cache` passed. Installed mypy 2.1.0 terminated with an internal error before analysis; cache-disabled retry behaved the same. `compileall` could not create bytecode caches because this workspace path denies that write, while pytest itself passed.
+- Blockers: none.
+- Next: user validates P2 with the quickstart command. Do not begin P3 persistence work until accepted.
+
+## 2026-10-31 - First feature specification
+
+- User: alesz1296-dev; branch not inspected; no Git commands.
+- Objective: begin spec-driven delivery with user validation between phases.
+- Work/areas: drafted specs/001-durable-linux-smoke/spec.md and linked it from README.
+- Decisions: P1 is Specify/Clarify; local target is Windows PowerShell with Docker Desktop; the MVP is English-only and reviewed by alesz1296-dev; runs support explicit and requirement-based platform selection with pre-dispatch eligibility validation.
+- Follow-up decisions: each platform represents one product family; initial examples are ICX, SPR, DMR, EMR and SRF. Workflow admission validates product, hardware/resource requirements, capabilities and OS. Linux readiness defaults to three configurable retries with 30-second, one-minute and two-minute delays.
+- Work completed: finalized the Phase 1 design artifacts for feature 001: plan, data model, OpenAPI draft, task list, validation guide and research decisions. Application implementation remains pending Phase 1 acceptance.
+- Checks: draft reviewed against system behavior and working standard; relative document links checked.
+- Blockers: platform-selection, local runtime, language/reviewer answers pending; detailed P1 contracts and plan remain to be completed.
+- Next: resolve clarifications, complete the feature design packet, and obtain user review before P2.
+
+## 2026-10-31 - Golden path and design-gap review
+
+- Objective: make the proposed SNTL architecture executable as a local-first implementation sequence and expose material design gaps before coding.
+- Work: added `GOLDEN-PATH.md` with the first vertical slice, acceptance gates, durable-state design, observability criteria, intentional deferrals, and decisions required before local, Kind, and AWS phases.
+- Checks: documentation links reviewed; no Git commands run.
+- Next: choose the first feature specification and resolve its Phase 1 decisions before implementing it.
+
+## 2026-10-31 - Standalone SNTL scope
+
+- User: alesz1296-dev; branch not inspected; no Git commands.
+- Objective: remove the external experiment-project integration requirement from SNTL.
+- Work: updated README, context, simulation/implementation guides and architecture views; added PROJECT-BOUNDARIES.md; archived the superseded integration proposal. Clarified the no-Git rule in the working standard.
+- Decisions: SNTL owns domain simulation, recovery, operational telemetry and its own acceptance tests; generic chaos and incident-training products are out of scope.
+- Checks: active-reference and Markdown link validation.
+- Blockers: none.
+- Next: specify SNTL's first durable workflow slice independently.
+
+Earlier entries below record historical decisions, including the now-superseded external integration proposal.
+
+## 2026-10-31 - Separate Alpha Legion experiment project
+
+- User: alesz1296-dev.
+- Branch: not inspected; no Git commands run.
+- Objective: extract generic chaos, traffic, and incident-training framework requirements into the sibling Alpha Legion project.
+- Work: added explicit ownership and cross-project links to the README, context, simulation guide, implementation plan, both architecture views, and architecture roadmap; added ALPHA-LEGION-INTEGRATION.md.
+- Decisions: SNTL keeps domain recovery and operational evidence; Alpha Legion independently owns experiments, cleanup, training and verification. Existing SNTL exercises are integration criteria.
+- Checks: documentation link and content review; no deployment or experiments.
+- Blockers: none.
+- Next: specify the first Alpha Legion vertical slice and SNTL attachment profile.
+
 ## 2026-10-28 — Architecture views recorded separately
 
 - **GitHub user:** alesz1296-dev

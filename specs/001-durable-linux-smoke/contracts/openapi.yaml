@@ -1,0 +1,140 @@
+openapi: 3.1.0
+info:
+  title: SNTL Control Plane API
+  version: 0.1.0-draft
+  description: Draft contract for Feature 001. English-only local MVP.
+paths:
+  /v1/workflow-runs:
+    post:
+      summary: Submit an immutable workflow version for execution
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubmitWorkflowRunRequest' }
+      responses:
+        '201': { description: Run accepted, content: { application/json: { schema: { $ref: '#/components/schemas/WorkflowRun' } } } }
+        '200': { description: Idempotent replay of an accepted request, content: { application/json: { schema: { $ref: '#/components/schemas/WorkflowRun' } } } }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/IneligiblePlatform' }
+  /v1/workflow-runs/{runId}:
+    get:
+      summary: Read run status, attempts, transitions, and evidence references
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RunId' }]
+      responses:
+        '200': { description: Run found, content: { application/json: { schema: { $ref: '#/components/schemas/WorkflowRun' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/workflow-runs/{runId}/cancel:
+    post:
+      summary: Request cooperative cancellation
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RunId' }]
+      responses:
+        '202': { description: Cancellation requested, content: { application/json: { schema: { $ref: '#/components/schemas/WorkflowRun' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/platforms:
+    get:
+      summary: List platform inventory visible to the caller
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Platform inventory, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Platform' } } } } }
+  /healthz:
+    get:
+      summary: Process health
+      responses: { '200': { description: Process is alive } }
+  /readyz:
+    get:
+      summary: Dependency readiness
+      responses: { '200': { description: Ready }, '503': { description: Dependency unavailable } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  parameters:
+    IdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 128 } }
+    RunId: { name: runId, in: path, required: true, schema: { type: string, format: uuid } }
+  schemas:
+    SubmitWorkflowRunRequest:
+      type: object
+      required: [workflow_name, workflow_version, requirements]
+      properties:
+        workflow_name: { type: string }
+        workflow_version: { type: string }
+        platform_id: { type: string, format: uuid, description: Optional named target; must satisfy requirements. }
+        requirements: { $ref: '#/components/schemas/PlatformRequirements' }
+        retry_override: { $ref: '#/components/schemas/RetryPolicy' }
+    PlatformRequirements:
+      type: object
+      required: [product, supported_os]
+      properties:
+        product: { type: string, pattern: '^[A-Z][A-Z0-9_-]{1,31}$', description: Must be an active configured product. Initial seed values are ICX, SPR, DMR, EMR, and SRF. }
+        supported_os: { type: string, enum: [linux] }
+        required_capabilities: { type: array, items: { type: string }, uniqueItems: true }
+        minimum_memory_mib: { type: integer, minimum: 1 }
+        minimum_cpu_cores: { type: integer, minimum: 1 }
+        required_devices: { type: array, items: { type: string }, uniqueItems: true }
+        thermal_control_required: { type: boolean, default: false }
+    RetryPolicy:
+      type: object
+      description: delays_seconds must contain exactly max_retries values; this cross-field rule is enforced by the server.
+      properties:
+        max_retries: { type: integer, minimum: 0, maximum: 5, default: 3 }
+        delays_seconds: { type: array, maxItems: 5, items: { type: integer, minimum: 0, maximum: 600 }, default: [30, 60, 120] }
+        attempt_timeout_seconds: { type: integer, minimum: 1, maximum: 600, default: 30 }
+    WorkflowRun:
+      type: object
+      required: [id, status, workflow_name, workflow_version, requirements, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [QUEUED, DISPATCHING, RUNNING, CANCEL_REQUESTED, SUCCEEDED, FAILED, CANCELED] }
+        workflow_name: { type: string }
+        workflow_version: { type: string }
+        requested_platform_id: { type: [string, 'null'], format: uuid }
+        assigned_platform_id: { type: [string, 'null'], format: uuid }
+        requirements: { $ref: '#/components/schemas/PlatformRequirements' }
+        created_at: { type: string, format: date-time }
+        tasks: { type: array, items: { $ref: '#/components/schemas/Task' } }
+    Task:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        step_id: { type: string }
+        status: { type: string }
+        attempts: { type: array, items: { $ref: '#/components/schemas/Attempt' } }
+    Attempt:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: integer }
+        outcome: { type: [string, 'null'] }
+        operation_id: { type: string, format: uuid }
+        evidence: { type: array, items: { type: string } }
+    Platform:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        product: { type: string }
+        memory_mib: { type: integer }
+        cpu_cores: { type: integer }
+        supported_os: { type: array, items: { type: string } }
+        capabilities: { type: array, items: { type: string } }
+        devices: { type: array, items: { type: string } }
+        health: { type: string }
+  responses:
+    ValidationError: { description: Request format or workflow validation failed }
+    Unauthorized: { description: Missing or invalid development bearer token }
+    Forbidden: { description: Authenticated identity lacks required role or ownership }
+    NotFound: { description: Requested resource does not exist or is not visible }
+    Conflict: { description: Idempotency fingerprint conflict or state conflict }
+    IneligiblePlatform: { description: No platform, or the named platform, satisfies all submitted requirements }

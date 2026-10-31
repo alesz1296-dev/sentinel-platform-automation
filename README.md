@@ -1,5 +1,9 @@
 # SNTL Automation Platform
 
+## Standalone project scope
+
+SNTL is independently developed, deployed, tested and operated. Its scope is platform-validation workflows, a deterministic hardware-lifecycle simulator, durable orchestration, recovery, observability and delivery. No external experiment framework is required. See [project boundaries](docs/PROJECT-BOUNDARIES.md).
+
 SNTL Automation Platform is a Python/FastAPI platform automation and validation system. It orchestrates versioned test workflows across simulated bare-metal platforms, records platform state and test results, and recovers from expected and unexpected reboots, freezes, and state mismatches.
 
 The hardware-facing tools are deliberate black boxes. SNTL models their contracts and lifecycle evidence while concentrating implementation effort on cloud architecture, Kubernetes operations, observability, security, reliability, and software delivery.
@@ -32,6 +36,8 @@ The project retains observability data for one day in its initial test environme
 
 ## Documentation
 
+- [Feature 001: durable Linux smoke workflow (draft)](specs/001-durable-linux-smoke/spec.md)
+- [Golden path and design review](docs/GOLDEN-PATH.md)
 - [Project context and requirements](docs/PROJECT-CONTEXT.md)
 - [Local-first implementation plan](docs/LOCAL-FIRST-IMPLEMENTATION.md)
 - [Simulation environment guide](docs/SIMULATION-ENVIRONMENT.md)

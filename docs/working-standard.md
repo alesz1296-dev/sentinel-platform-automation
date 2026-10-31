@@ -2,6 +2,8 @@
 
 This standard applies to every SNTL Automation Platform contributor and session. It adapts the supplied Spec Kit, collaboration, CI, security, and manual-first infrastructure requirements to this project.
 
+Before implementation begins, use the [Golden path and design review](GOLDEN-PATH.md) to select the current phase and record resolved decisions from its gap register.
+
 ## Spec-driven development
 
 Every feature follows this sequence:
@@ -23,6 +25,8 @@ Required artifacts are created under `specs/<feature>/` before implementation:
 Specifications are the source of truth. Code must serve the specification. Do not invent API schemas, credentials, provider choices, or business decisions. Verify that `specs/<feature>/spec.md` exists before implementing.
 
 ## Git rules
+
+Assistants must never execute Git commands, including read-only commands. The user performs repository operations. The workflow below is guidance for human contributors; assistants supply commands only when requested.
 
 Never work directly on `main`. Before starting work, run `git pull`, review the repository status, then create a dedicated branch using one of:
 
@@ -65,7 +69,7 @@ Each session entry in `docs/logs.md` includes:
 
 Each commit row in `docs/changes.md` includes date, user, branch, hash, message, summary, tests/checks, and PR link when available.
 
-Every task needs a primary owner, reviewer, phase, Spec Kit reference, required tests, and documentation impact. A reviewer must approve a work packet before it becomes Complete. Shared-contract changes require review by both Ale and Diego before implementation is merged.
+Every task needs a primary owner, reviewer, phase, Spec Kit reference, required tests, and documentation impact. A reviewer must approve a work packet before it becomes Complete. For the English-only MVP, alesz1296-dev is the sole reviewer; shared-contract review is added when collaboration scope requires it.
 
 ## Quality and CI
 
@@ -83,7 +87,7 @@ CI begins in Phase 0 and runs:
 
 As relevant code is introduced, add Alembic migration validation, Docker build validation, `terraform validate`, and Helm template validation. Required checks must pass before a pull request can merge.
 
-English and Spanish are first-class MVP languages. English is the default. User-facing language behavior requires tests and future locales use locale codes.
+English is the MVP language. User-facing language behavior requires tests; Spanish and future locales use locale codes when localization becomes a planned feature.
 
 ## Security and access
 
@@ -103,6 +107,8 @@ Kubernetes and AWS work is manual-first. Humans review and run all mutating infr
 - Secrets use AWS Secrets Manager; non-secret configuration may use SSM Parameter Store or Terraform variables.
 
 ## SNTL-specific design boundaries
+
+SNTL must build, run, test and deploy independently of sibling projects. Generic chaos orchestration, hidden-root-cause training and scoring are outside scope. See [project boundaries](PROJECT-BOUNDARIES.md).
 
 The enterprise hardware adapters are black boxes. SNTL owns job sequencing, platform leases, observed state, recovery, observability, RBAC, audit trails, and deployment. It does not reproduce proprietary BIOS, EFI, register, or IPS implementations.
 
